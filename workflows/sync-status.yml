@@ -1,4 +1,4 @@
-name: Sync Issue Status to Overall Dev Tracker
+name: Sync Status to Overall Dev Tracker
 
 on:
   workflow_call:
@@ -37,7 +37,7 @@ jobs:
             };
 
             if (!statusMap[newStatus]) {
-              console.log("Unknown status: " + newStatus);
+              console.log("Invalid status. Skipping.");
               return;
             }
 
@@ -70,7 +70,7 @@ jobs:
 
             const item = result.node.items.nodes.find(n => n.content?.id === issueNodeId);
             if (!item) {
-              console.log("Issue not found in Dashboard project.");
+              console.log("Issue not found in Overall Dev Tracker.");
               return;
             }
 
