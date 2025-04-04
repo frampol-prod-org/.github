@@ -1,0 +1,84 @@
+name: Sync Issue Status to Dashboard
+
+on:
+  workflow_call:
+    inputs:
+      issue_number:
+        required: true
+        type: string
+      new_status:
+        required: true
+        type: string
+    secrets:
+      GH_TOKEN:
+        required: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync status to Overall Dev Tracker
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_TOKEN }}
+          script: |
+            const issueNumber = ${{ inputs.issue_number }};
+            const newStatus = ${{ inputs.new_status }};
+            const dashboardProjectId = "REPLACE_WITH_PROJECT_ID";
+            const statusFieldId = "REPLACE_WITH_STATUS_FIELD_ID";
+
+            const options = {
+              "To-Do": "REPLACE_WITH_OPTION_ID",
+              "In progress": "REPLACE_WITH_OPTION_ID",
+              "Done": "REPLACE_WITH_OPTION_ID"
+            };
+
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            const issueNodeId = issue.node_id;
+
+            const result = await github.graphql(`
+              query {
+                node(id: "${dashboardProjectId}") {
+                  ... on ProjectV2 {
+                    items(first: 100) {
+                      nodes {
+                        id
+                        content {
+                          ... on Issue {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `);
+
+            const item = result.node.items.nodes.find(n => n.content?.id === issueNodeId);
+            if (!item) {
+              console.log("Issue not found in Dashboard project.");
+              return;
+            }
+
+            await github.graphql(`
+              mutation {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: "${dashboardProjectId}",
+                  itemId: "${item.id}",
+                  fieldId: "${statusFieldId}",
+                  value: {
+                    singleSelectOptionId: "${options[newStatus]}"
+                  }
+                }) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+            `);
