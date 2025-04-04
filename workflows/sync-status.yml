@@ -1,4 +1,4 @@
-name: Sync Issue Status to Dashboard
+name: Sync Issue Status to Overall Dev Tracker
 
 on:
   workflow_call:
@@ -24,14 +24,22 @@ jobs:
           script: |
             const issueNumber = ${{ inputs.issue_number }};
             const newStatus = ${{ inputs.new_status }};
-            const dashboardProjectId = "REPLACE_WITH_PROJECT_ID";
-            const statusFieldId = "REPLACE_WITH_STATUS_FIELD_ID";
+            const dashboardProjectId = "PVT_kwDOC5NMC84A1r0v";
+            const statusFieldId = "PVTSSF_lADOC5NMC84A1r0vzgrHUmU";
 
-            const options = {
-              "To-Do": "REPLACE_WITH_OPTION_ID",
-              "In progress": "REPLACE_WITH_OPTION_ID",
-              "Done": "REPLACE_WITH_OPTION_ID"
+            const statusMap = {
+              "Backlog": "f75ad846",
+              "To-Do": "ed0c20ce",
+              "Ready": "61e4505c",
+              "In progress": "47fc9ee4",
+              "In review": "df73e18b",
+              "Done": "98236657"
             };
+
+            if (!statusMap[newStatus]) {
+              console.log("Unknown status: " + newStatus);
+              return;
+            }
 
             const { data: issue } = await github.rest.issues.get({
               owner: context.repo.owner,
@@ -73,7 +81,7 @@ jobs:
                   itemId: "${item.id}",
                   fieldId: "${statusFieldId}",
                   value: {
-                    singleSelectOptionId: "${options[newStatus]}"
+                    singleSelectOptionId: "${statusMap[newStatus]}"
                   }
                 }) {
                   projectV2Item {
